@@ -103,6 +103,13 @@ void System::SolveBySubstitution(void) {
                 continue;
             }
 
+            // If the parameters are not equal, it's better to add both of them
+            // to the Jacobian and solve them before substituting them as usual.
+            // This approach improves results when we are adding a coincident
+            // constraint on points of two already well-constrained parts,
+            // since now they can move across larger distances.
+            if(fabs(SK.GetParam(a)->val - SK.GetParam(b)->val) > CONVERGE_TOLERANCE) continue;
+
             if(IsDragged(a)) {
                 // A is being dragged, so A should stay, and B should go
                 hParam t = a;
