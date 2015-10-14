@@ -592,7 +592,11 @@ void Constraint::MenuConstrain(int id) {
                 c.reference = true;
             }
 
+            c.is_signed = true;
             c.ModifyToSatisfy();
+            if(c.valA < 0.0) {
+                c.option = 1;
+            }
             AddConstraint(&c);
             break;
         }
@@ -602,6 +606,9 @@ void Constraint::MenuConstrain(int id) {
                 c.type = PARALLEL;
                 c.entityA = gs.vector[0];
                 c.entityB = gs.vector[1];
+                c.is_signed = true;
+                c.ModifyToSatisfy();
+                if(fabs(c.valA) > PI / 2) c.option = 1;
             } else if(gs.lineSegments == 1 && gs.arcs == 1 && gs.n == 2) {
                 Entity *line = SK.GetEntity(gs.entity[0]);
                 Entity *arc  = SK.GetEntity(gs.entity[1]);
@@ -704,6 +711,9 @@ void Constraint::MenuConstrain(int id) {
                       "    * two normals\n");
                 return;
             }
+            c.is_signed = true;
+            c.ModifyToSatisfy();
+            if(c.valA < -PI / 2.0) c.option = 1;
             AddConstraint(&c);
             break;
 
