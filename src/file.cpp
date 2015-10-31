@@ -634,6 +634,35 @@ bool SolveSpaceUI::LoadEntitiesFromFile(const std::string &filename, EntityList 
         }
     }
 
+    // legacy entity types for support old file formats
+    int FACE_NORMAL_PT =  5000;
+    int FACE_XPROD     =  5001;
+
+    for(Entity *e = le->First(); e; e = le->NextAfter(e)) {
+        if(e->type == FACE_NORMAL_PT || e->type == FACE_XPROD) {
+            e->type = Entity::FACE_QUAT_PT;
+
+            // take a normal which is written as a vector
+            Vector n = Vector::From(e->actNormal.vx, e->actNormal.vy, e->actNormal.vz);
+
+            // calculate u vector for the face rotation basis
+            Vector u;
+            if(n.Minus(Vector::From(0.0, 0.0, 1.0)).MagSquared() > LENGTH_EPS * LENGTH_EPS) {
+                // if n not lays along z, we can choose it in basis calculation
+                u = n.Cross(Vector::From(0.0, 0.0, 1.0)).WithMagnitude(1.0);
+            } else {
+                // otherwise we choose y for basis calculation
+                u = n.Cross(Vector::From(0.0, 1.0, 0.0)).WithMagnitude(1.0);
+            }
+
+            // calculate v
+            Vector v = u.Cross(n).WithMagnitude(1.0);
+
+            // write resulting basis
+            e->actNormal = Quaternion::From(u, v);
+        }
+    }
+
     fclose(fh);
     return true;
 }

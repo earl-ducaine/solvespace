@@ -157,8 +157,7 @@ void TextWindow::DescribeSelection(void) {
                 Printf(false, "     radius =  %Fi%s", SS.MmToString(r).c_str());
                 break;
             }
-            case Entity::FACE_NORMAL_PT:
-            case Entity::FACE_XPROD:
+            case Entity::FACE_QUAT_PT:
             case Entity::FACE_N_ROT_TRANS:
             case Entity::FACE_N_ROT_AA:
             case Entity::FACE_N_TRANS:
