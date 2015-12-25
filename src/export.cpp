@@ -427,6 +427,7 @@ VectorFileWriter *VectorFileWriter::ForFile(const std::string &filename) {
         return NULL;
     }
     ret->f = f;
+    ret->filename = filename;
     return ret;
 }
 

@@ -546,6 +546,7 @@ public:
 class VectorFileWriter {
 public:
     FILE *f;
+    std::string filename;
     Vector ptMin, ptMax;
 
     // This quells the Clang++ warning "'VectorFileWriter' has virtual
@@ -575,6 +576,8 @@ public:
 };
 class DxfFileWriter : public VectorFileWriter {
 public:
+    std::vector <SBezier> beziers;
+
     void StartPath( RgbaColor strokeRgb, double lineWidth,
                     bool filled, RgbaColor fillRgb);
     void FinishPath(RgbaColor strokeRgb, double lineWidth,
