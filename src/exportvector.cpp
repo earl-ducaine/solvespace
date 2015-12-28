@@ -17,12 +17,14 @@ void VectorFileWriter::Dummy(void) {
 // Routines for DXF export
 //-----------------------------------------------------------------------------
 void DxfFileWriter::StartFile(void) {
-    beziers.clear();
+    paths.clear();
 }
 
 void DxfFileWriter::StartPath(RgbaColor strokeRgb, double lineWidth,
                               bool filled, RgbaColor fillRgb)
 {
+    paths.push_back(BezierPath());
+    paths.back().color = strokeRgb.ToPackedInt();
 }
 void DxfFileWriter::FinishPath(RgbaColor strokeRgb, double lineWidth,
                                bool filled, RgbaColor fillRgb)
@@ -33,13 +35,14 @@ void DxfFileWriter::Triangle(STriangle *tr) {
 }
 
 void DxfFileWriter::Bezier(SBezier *sb) {
-    beziers.push_back(*sb);
+    if(paths.empty()) paths.push_back(BezierPath());
+    paths.back().beziers.push_back(*sb);
 }
 
 class DxfWriteInterface : public DRW_Interface {
-
     DxfFileWriter *writer;
     dxfRW *dxf;
+    int color;
 
 public:
     DxfWriteInterface(DxfFileWriter *w, dxfRW *dxfrw) : writer(w), dxf(dxfrw) { }
@@ -89,13 +92,17 @@ public:
     virtual void writeBlockRecords() { }
 
     virtual void writeEntities() {
-        for(SBezier &sb : writer->beziers) {
-            writeBezier(sb);
+        for(DxfFileWriter::BezierPath &path : writer->paths) {
+            color = path.color;
+            for(SBezier &sb : path.beziers) {
+                writeBezier(sb);
+            }
         }
     }
 
     void writeLine(const Vector &p0, const Vector &p1) {
         DRW_Line line;
+        line.color24 = color;
         line.basePoint = DRW_Coord(p0.x, p0.y, 0.0);
         line.secPoint = DRW_Coord(p1.x, p1.y, 0.0);
         dxf->writeLine(&line);
@@ -103,6 +110,7 @@ public:
 
     void writeArc(const Vector &c, double r, double sa, double ea) {
         DRW_Arc arc;
+        arc.color24 = color;
         arc.radious = r;
         arc.basePoint = DRW_Coord(c.x, c.y, 0.0);
         arc.staangle = sa;
@@ -112,6 +120,7 @@ public:
 
     void writePoint(const Vector &p) {
         DRW_Point point;
+        point.color24 = color;
         point.basePoint = DRW_Coord(p.x, p.y, 0.0);
         dxf->writePoint(&point);
     }
@@ -144,6 +153,7 @@ public:
     void writeSpline(SBezier &sb) {
         bool isRational = sb.IsRational();
         DRW_Spline spline;
+        spline.color24 = color;
         spline.flags = (isRational) ? 0x04 : 0x08;
         spline.degree = sb.deg;
         spline.ncontrol = sb.deg + 1;
@@ -204,8 +214,8 @@ void DxfFileWriter::FinishAndCloseFile(void) {
 
     dxfRW dxf(filename.c_str());
     DxfWriteInterface interface(this, &dxf);
-    dxf.write(&interface, DRW::AC1012, false);
-    beziers.clear();
+    dxf.write(&interface, DRW::AC1018, false);
+    paths.clear();
 }
 
 //-----------------------------------------------------------------------------
