@@ -116,21 +116,68 @@ public:
         dxf->writePoint(&point);
     }
 
+    // actually don't understand it, but this is works
+    void makeKnotsFor(DRW_Spline *spline) {
+        if(spline->degree == 3) {
+            spline->nknots = 8;
+            spline->knotslist.push_back(0.0);
+            spline->knotslist.push_back(0.0);
+            spline->knotslist.push_back(0.0);
+            spline->knotslist.push_back(0.0);
+            spline->knotslist.push_back(1.0);
+            spline->knotslist.push_back(1.0);
+            spline->knotslist.push_back(1.0);
+            spline->knotslist.push_back(1.0);
+        } else if(spline->degree == 2) {
+            spline->nknots = 6;
+            spline->knotslist.push_back(0.0);
+            spline->knotslist.push_back(0.0);
+            spline->knotslist.push_back(0.0);
+            spline->knotslist.push_back(1.0);
+            spline->knotslist.push_back(1.0);
+            spline->knotslist.push_back(1.0);
+        } else {
+            oops();
+        }
+    }
+
+    void writeSpline(SBezier &sb) {
+        bool isRational = sb.IsRational();
+        DRW_Spline spline;
+        spline.flags = (isRational) ? 0x04 : 0x08;
+        spline.degree = sb.deg;
+        spline.ncontrol = sb.deg + 1;
+        makeKnotsFor(&spline);
+        for(int i = 0; i <= sb.deg; i++) {
+            spline.controllist.push_back(new DRW_Coord(sb.ctrl[i].x, sb.ctrl[i].y, 0.0));
+            if(isRational) spline.weightlist.push_back(sb.weight[i]);
+        }
+        dxf->writeSpline(&spline);
+    }
+
     void writeBezier(SBezier &sb) {
         Vector c;
         Vector n = Vector::From(0.0, 0.0, 1.0);
         double r;
 
         if(sb.deg == 1) {
+            // line
             writeLine(sb.ctrl[0], sb.ctrl[1]);
         } else if(sb.IsInPlane(n, 0) && sb.IsCircle(n, &c, &r)) {
+            // circle
             double theta0 = atan2(sb.ctrl[0].y - c.y, sb.ctrl[0].x - c.x);
             double theta1 = atan2(sb.ctrl[2].y - c.y, sb.ctrl[2].x - c.x);
             double dtheta = WRAP_SYMMETRIC(theta1 - theta0, 2.0 * PI);
             if(dtheta < 0.0) swap(theta0, theta1);
 
             writeArc(c, r, theta0, theta1);
+        } else if(!sb.IsRational()) {
+            // non-rational spline
+            writeSpline(sb);
         } else {
+            // rational spline
+            // we can export those, but LibreCAD and QCad are unable to import them
+            // writeSpline(sb);
             writeBezierAsPwl(sb);
         }
     }
@@ -157,7 +204,7 @@ void DxfFileWriter::FinishAndCloseFile(void) {
 
     dxfRW dxf(filename.c_str());
     DxfWriteInterface interface(this, &dxf);
-    dxf.write(&interface, DRW::AC1006, false);
+    dxf.write(&interface, DRW::AC1012, false);
     beziers.clear();
 }
 
