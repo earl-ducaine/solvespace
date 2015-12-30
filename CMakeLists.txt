@@ -62,6 +62,9 @@ endif()
 
 CHECK_INCLUDE_FILE("stdint.h" HAVE_STDINT_H)
 
+message(STATUS "Using in-tree libdxfrw")
+add_subdirectory(extlib/libdxfrw)
+
 find_package(OpenGL REQUIRED)
 
 if(WIN32)
