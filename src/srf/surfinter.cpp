@@ -46,7 +46,8 @@ void SSurface::AddExactIntersectionCurve(SBezier *sb, SSurface *srfB,
             sc.pts.Add(v);
         }
         if(backwards) sc.pts.Reverse();
-        split = sc = {};
+        split = sc;
+        sc = {};
     } else {
         sb->MakePwlInto(&(sc.pts));
         // and split the line where it intersects our existing surfaces
