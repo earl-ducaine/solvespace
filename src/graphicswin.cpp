@@ -238,7 +238,7 @@ void GraphicsWindow::Init(void) {
     ShowTextWindow(showTextWindow);
 
     showSnapGrid = false;
-    context.active = false;
+    contextActive = false;
 
     // Do this last, so that all the menus get updated correctly.
     EnsureValidActives();

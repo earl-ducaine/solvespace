@@ -79,7 +79,7 @@ void GraphicsWindow::MouseMoved(double x, double y, bool leftDown,
             bool middleDown, bool rightDown, bool shiftDown, bool ctrlDown)
 {
     if(GraphicsEditControlIsVisible()) return;
-    if(context.active) return;
+    if(contextActive) return;
 
     SS.extraLine.draw = false;
 
@@ -495,7 +495,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
     if(ToolbarMouseMoved((int)x, (int)y)) return;
     if(orig.startedMoving) return;
 
-    if(context.active) return;
+    if(contextActive) return;
 
     if(pending.operation == DRAGGING_NEW_LINE_POINT) {
         SuggestedConstraint suggested =
@@ -516,7 +516,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
         return;
     }
 
-    context.active = true;
+    contextActive = true;
 
     if(!hover.IsEmpty()) {
         MakeSelected(&hover);
@@ -717,7 +717,7 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
             break;
     }
 
-    context.active = false;
+    contextActive = false;
     SS.ScheduleShowTW();
 }
 
@@ -1285,7 +1285,7 @@ void GraphicsWindow::MouseScroll(double x, double y, int delta) {
 void GraphicsWindow::MouseLeave(void) {
     // Un-hover everything when the mouse leaves our window, unless there's
     // currently a context menu shown.
-    if(!context.active) {
+    if(!contextActive) {
         hover.Clear();
         toolbarTooltipped = 0;
         toolbarHovered = 0;

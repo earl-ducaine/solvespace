@@ -387,7 +387,7 @@ public:
     };
 
     // The system Jacobian matrix
-    struct {
+    struct Matrix {
         // The corresponding equation for each row
         hEquation   eq[MAX_UNKNOWNS];
 
@@ -396,10 +396,11 @@ public:
 
         // We're solving AX = B
         int m, n;
-        struct {
+        struct MatrixA {
             Expr        *sym[MAX_UNKNOWNS][MAX_UNKNOWNS];
             double       num[MAX_UNKNOWNS][MAX_UNKNOWNS];
-        }           A;
+        };
+        MatrixA A;
 
         double      scale[MAX_UNKNOWNS];
 
@@ -409,11 +410,13 @@ public:
 
         double      X[MAX_UNKNOWNS];
 
-        struct {
+        struct VectorB {
             Expr        *sym[MAX_UNKNOWNS];
             double       num[MAX_UNKNOWNS];
-        }           B;
-    } mat;
+        };
+        VectorB B;
+    };
+    Matrix mat;
 
     static const double RANK_MAG_TOLERANCE, CONVERGE_TOLERANCE;
     int CalculateRank(void);
@@ -446,14 +449,14 @@ public:
 
 class TtfFont {
 public:
-    typedef struct {
+    struct FontPoint {
         bool        onCurve;
         bool        lastInContour;
         int16_t     x;
         int16_t     y;
-    } FontPoint;
+    };
 
-    typedef struct {
+    struct Glyph {
         FontPoint   *pt;
         int         pts;
 
@@ -461,11 +464,11 @@ public:
         int         xMin;
         int         leftSideBearing;
         int         advanceWidth;
-    } Glyph;
+    };
 
-    typedef struct {
+    struct IntPoint {
         int x, y;
-    } IntPoint;
+    };
 
     std::string           fontFile;
     std::string           name;
@@ -709,7 +712,7 @@ public:
     GraphicsWindow              GW;
 
     // The state for undo/redo
-    typedef struct {
+    struct UndoState {
         IdList<Group,hGroup>            group;
         IdList<Request,hRequest>        request;
         IdList<Constraint,hConstraint>  constraint;
@@ -724,13 +727,13 @@ public:
             param.Clear();
             style.Clear();
         }
-    } UndoState;
+    };
     enum { MAX_UNDO = 16 };
-    typedef struct {
+    struct UndoStack {
         UndoState   d[MAX_UNDO];
         int         cnt;
         int         write;
-    } UndoStack;
+    };
     UndoStack   undo;
     UndoStack   redo;
     void UndoEnableMenus(void);
@@ -762,29 +765,32 @@ public:
     bool     exportShadedTriangles;
     bool     exportPwlCurves;
     bool     exportCanvasSizeAuto;
-    struct {
+    struct ExportMargin {
         float   left;
         float   right;
         float   bottom;
         float   top;
-    }        exportMargin;
-    struct {
+    };
+    ExportMargin exportMargin;
+    struct ExportCanvas {
         float   width;
         float   height;
         float   dx;
         float   dy;
-    }        exportCanvas;
-    struct {
+    };
+    ExportCanvas exportCanvas;
+    struct GCode {
         float   depth;
         int     passes;
         float   feed;
         float   plungeFeed;
-    }        gCode;
+    };
+    GCode gCode;
 
-    typedef enum {
+    enum Unit {
         UNIT_MM = 0,
         UNIT_INCHES
-    } Unit;
+    };
     Unit     viewUnits;
     int      afterDecimalMm;
     int      afterDecimalInch;
@@ -821,23 +827,24 @@ public:
     std::string saveFile;
     bool        fileLoadError;
     bool        unsaved;
-    typedef struct {
+    struct SaveTable {
         char        type;
         const char *desc;
         char        fmt;
         void       *ptr;
-    } SaveTable;
+    };
     static const SaveTable SAVED[];
     void SaveUsingTable(int type);
     void LoadUsingTable(char *key, char *val);
-    struct {
+    struct Saved {
         Group        g;
         Request      r;
         Entity       e;
         Param        p;
         Constraint   c;
         Style        s;
-    } sv;
+    };
+    Saved sv;
     static void MenuFile(int id);
 	bool Autosave();
     void RemoveAutosave();
@@ -872,27 +879,31 @@ public:
     static void MenuAnalyze(int id);
 
     // Additional display stuff
-    struct {
+    struct Traced {
         SContour    path;
         hEntity     point;
-    } traced;
+    };
+    Traced traced;
     SEdgeList nakedEdges;
-    struct {
+    struct ExtraLine {
         bool        draw;
         Vector      ptA;
         Vector      ptB;
-    } extraLine;
-    struct {
+    };
+    ExtraLine extraLine;
+    struct BackgroundImage {
         uint8_t     *fromFile;
         int         w, h;
         int         rw, rh;
         double      scale; // pixels per mm
         Vector      origin;
-    } bgImage;
-    struct {
+    };
+    BackgroundImage bgImage;
+    struct ExportedInfo {
         bool        draw;
         Vector      pt, u, v;
-    } justExportedInfo;
+    };
+    ExportedInfo justExportedInfo;
 
     class Clipboard {
     public:
@@ -910,12 +921,13 @@ public:
 
     // Consistency checking on the sketch: stuff with missing dependencies
     // will get deleted automatically.
-    struct {
+    struct Deleted {
         int     requests;
         int     groups;
         int     constraints;
         int     nonTrivialConstraints;
-    } deleted;
+    };
+    Deleted deleted;
     bool GroupExists(hGroup hg);
     bool PruneOrphans(void);
     bool EntityExists(hEntity he);
@@ -943,11 +955,12 @@ public:
     // the sketch!
     bool allConsistent;
 
-    struct {
+    struct Later {
         bool    scheduled;
         bool    showTW;
         bool    generateAll;
-    } later;
+    };
+    Later later;
     void ScheduleShowTW();
     void ScheduleGenerateAll();
     void DoLater(void);
