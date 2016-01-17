@@ -407,6 +407,7 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
     Vector gr = SS.GW.projRight.ScaledBy(1/SS.GW.scale);
     Vector gu = SS.GW.projUp.ScaledBy(1/SS.GW.scale);
     Vector gn = (gr.Cross(gu)).WithMagnitude(1/SS.GW.scale);
+    Vector n;
 
     switch(type) {
         case PT_PT_DISTANCE: {
@@ -927,7 +928,6 @@ void Constraint::DrawOrGetDistance(Vector *labelPos) {
 
         {
         case SYMMETRIC:
-            Vector n;
             n = SK.GetEntity(entityA)->Normal()->NormalN(); goto s;
         case SYMMETRIC_HORIZ:
             n = SK.GetEntity(workplane)->Normal()->NormalU(); goto s;
