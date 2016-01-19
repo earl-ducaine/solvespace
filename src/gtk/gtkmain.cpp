@@ -255,7 +255,7 @@ public:
             oops();
         }
 
-        static int fbconfig_attrs[] = {
+        static int fbconfig_attrs[] {
             GLX_RENDER_TYPE, GLX_RGBA_BIT,
             GLX_RED_SIZE, 8,
             GLX_GREEN_SIZE, 8,
@@ -912,7 +912,7 @@ static std::map<int, Gtk::MenuItem *> main_menu_items;
 
 static void InitMainMenu(Gtk::MenuShell *menu_shell) {
     Gtk::MenuItem *menu_item = NULL;
-    Gtk::MenuShell *levels[5] = {menu_shell, 0};
+    Gtk::MenuShell *levels[5] {menu_shell, 0};
 
     const GraphicsWindow::MenuEntry *entry = &GraphicsWindow::menu[0];
     int current_level = 0;
@@ -1451,7 +1451,7 @@ void LoadAllFontFiles(void) {
         FcChar8 *filenameFC = FcPatternFormat(fs->fonts[i], (const FcChar8*) "%{file}");
         std::string filename = (char*) filenameFC;
         if(FilenameHasExtension(filename, ".ttf")) {
-            TtfFont tf = {};
+            TtfFont tf {};
             tf.fontFile = filename;
             SS.fonts.l.Add(&tf);
         }

@@ -6,10 +6,10 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
-SolveSpaceUI SolveSpace::SS = {};
-Sketch SolveSpace::SK = {};
+SolveSpaceUI SolveSpace::SS {};
+Sketch SolveSpace::SK {};
 
-std::string SolveSpace::RecentFile[MAX_RECENT] = {};
+std::string SolveSpace::RecentFile[MAX_RECENT] {};
 
 void SolveSpaceUI::Init() {
     SS.tangentArcRadius = 10.0;
@@ -513,7 +513,7 @@ void SolveSpaceUI::MenuFile(int id) {
                             SRF_PATTERN)) break;
             CnfFreezeString(Extension(exportFile), "SurfacesExportFormat");
 
-            StepFileWriter sfw = {};
+            StepFileWriter sfw {};
             sfw.ExportSurfacesTo(exportFile);
             break;
         }
@@ -696,9 +696,9 @@ void SolveSpaceUI::MenuAnalyze(int id) {
                       "intersecting.");
                 break;
             }
-            SEdgeList sel = {};
+            SEdgeList sel {};
             g->polyLoops.MakeEdgesInto(&sel);
-            SPolygon sp = {};
+            SPolygon sp {};
             sel.AssemblePolygon(&sp, NULL, true);
             sp.normal = sp.ComputeNormal();
             sp.FixContourDirections();

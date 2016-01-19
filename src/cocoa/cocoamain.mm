@@ -150,7 +150,7 @@ void SolveSpace::ScheduleLater() {
     self = [super initWithFrame:frameRect];
     [self setWantsLayer:YES];
 
-    NSOpenGLPixelFormatAttribute attrs[] = {
+    NSOpenGLPixelFormatAttribute attrs[] {
         NSOpenGLPFAColorSize, 24,
         NSOpenGLPFADepthSize, 24,
         0
@@ -385,7 +385,7 @@ CONVERT(Rect)
 - (void)startEditing:(NSString*)text at:(NSPoint)xy {
     // Convert to ij (vs. xy) style coordinates
     NSSize size = [self convertSizeToBacking:[self bounds].size];
-    NSPoint point = {
+    NSPoint point {
         .x = xy.x + size.width / 2,
         .y = xy.y - size.height / 2 + [editor intrinsicContentSize].height
     };
@@ -595,7 +595,7 @@ std::map<int, NSMenuItem*> mainMenuItems;
 
 void InitMainMenu(NSMenu *mainMenu) {
     NSMenuItem *menuItem = NULL;
-    NSMenu *levels[5] = {mainMenu, 0};
+    NSMenu *levels[5] {mainMenu, 0};
     NSString *label;
 
     const GraphicsWindow::MenuEntry *entry = &GraphicsWindow::menu[0];
@@ -1096,7 +1096,7 @@ void SolveSpace::LoadAllFontFiles(void) {
         CFURLRef url = (CFURLRef)CTFontDescriptorCopyAttribute(fontRef, kCTFontURLAttribute);
         NSString *fontPath = [NSString stringWithString:[(NSURL *)CFBridgingRelease(url) path]];
         if([[fontPath pathExtension] isEqual:@"ttf"]) {
-            TtfFont tf = {};
+            TtfFont tf {};
             tf.fontFile = [[NSFileManager defaultManager]
                 fileSystemRepresentationWithPath:fontPath];
             SS.fonts.l.Add(&tf);

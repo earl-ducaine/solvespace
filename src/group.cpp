@@ -8,10 +8,10 @@
 //-----------------------------------------------------------------------------
 #include "solvespace.h"
 
-const hParam   Param::NO_PARAM = { 0 };
+const hParam   Param::NO_PARAM { 0 };
 #define NO_PARAM (Param::NO_PARAM)
 
-const hGroup Group::HGROUP_REFERENCES = { 1 };
+const hGroup Group::HGROUP_REFERENCES { 1 };
 
 #define gs (SS.GW.gs)
 
@@ -37,7 +37,7 @@ void Group::Clear(void) {
 }
 
 void Group::AddParam(IdList<Param,hParam> *param, hParam hp, double v) {
-    Param pa = {};
+    Param pa {};
     pa.h = hp;
     pa.val = v;
 
@@ -51,7 +51,7 @@ bool Group::IsVisible(void) {
 }
 
 void Group::MenuGroup(int id) {
-    Group g = {};
+    Group g {};
     g.visible = true;
     g.color = RGBi(100, 100, 100);
     g.scale = 1;
@@ -324,7 +324,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
                 q = predef.q;
             } else oops();
 
-            Entity normal = {};
+            Entity normal {};
             normal.type = Entity::NORMAL_N_COPY;
             normal.numNormal = q;
             normal.point[0] = h.entity(2);
@@ -332,14 +332,14 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
             normal.h = h.entity(1);
             entity->Add(&normal);
 
-            Entity point = {};
+            Entity point {};
             point.type = Entity::POINT_N_COPY;
             point.numPoint = SK.GetEntity(predef.origin)->PointGetNum();
             point.group = h;
             point.h = h.entity(2);
             entity->Add(&point);
 
-            Entity wp = {};
+            Entity wp {};
             wp.type = Entity::WORKPLANE;
             wp.normal = normal.h;
             wp.point[0] = point.h;
@@ -362,7 +362,7 @@ void Group::Generate(IdList<Entity,hEntity> *entity,
 
             // Get some arbitrary point in the sketch, that will be used
             // as a reference when defining top and bottom faces.
-            hEntity pt = { 0 };
+            hEntity pt { 0 };
             for(i = 0; i < entity->n; i++) {
                 Entity *e = &(entity->elem[i]);
                 if(e->group.v != opA.v) continue;
@@ -521,10 +521,10 @@ void Group::AddEq(IdList<Equation,hEquation> *l, Expr *expr, int index) {
 }
 
 void Group::GenerateEquations(IdList<Equation,hEquation> *l) {
-    Equation eq = {};
+    Equation eq {};
     if(type == IMPORTED) {
         // Normalize the quaternion
-        ExprQuaternion q = {
+        ExprQuaternion q {
             Expr::From(h.param(3)),
             Expr::From(h.param(4)),
             Expr::From(h.param(5)),
@@ -553,7 +553,7 @@ void Group::GenerateEquations(IdList<Equation,hEquation> *l) {
             Entity *w = SK.GetEntity(predef.entityB);
             ExprVector u = w->Normal()->NormalExprsU();
             ExprVector v = w->Normal()->NormalExprsV();
-            ExprVector extruden = {
+            ExprVector extruden {
                 Expr::From(h.param(0)),
                 Expr::From(h.param(1)),
                 Expr::From(h.param(2)) };
@@ -604,7 +604,7 @@ hEntity Group::Remap(hEntity in, int copyNumber) {
 void Group::MakeExtrusionLines(IdList<Entity,hEntity> *el, hEntity in) {
     Entity *ep = SK.GetEntity(in);
 
-    Entity en = {};
+    Entity en {};
     if(ep->IsPoint()) {
         // A point gets extruded to form a line segment
         en.point[0] = Remap(ep->h, REMAP_TOP);
@@ -640,7 +640,7 @@ void Group::MakeExtrusionLines(IdList<Entity,hEntity> *el, hEntity in) {
 void Group::MakeLatheCircles(IdList<Entity,hEntity> *el, IdList<Param,hParam> *param, hEntity in, Vector pt, Vector axis, int ai) {
     Entity *ep = SK.GetEntity(in);
 
-    Entity en = {};
+    Entity en {};
     if(ep->IsPoint()) {
         // A point gets revolved to form an arc.
         en.point[0] = Remap(predef.origin, ai);
@@ -663,7 +663,7 @@ void Group::MakeLatheCircles(IdList<Entity,hEntity> *el, IdList<Param,hParam> *p
         en.type = Entity::ARC_OF_CIRCLE;
 
         // Generate a normal.
-        Entity n = {};
+        Entity n {};
         n.workplane = en.workplane;
         n.h = Remap(ep->h, REMAP_PT_TO_NORMAL);
         n.group = en.group;
@@ -715,7 +715,7 @@ void Group::MakeExtrusionTopBottomFaces(IdList<Entity,hEntity> *el, hEntity pt)
     Group *src = SK.GetGroup(opA);
     Vector n = src->polyLoops.normal;
 
-    Entity en = {};
+    Entity en {};
     en.type = Entity::FACE_NORMAL_PT;
     en.group = h;
 
@@ -735,7 +735,7 @@ void Group::CopyEntity(IdList<Entity,hEntity> *el,
                        hParam qw, hParam qvx, hParam qvy, hParam qvz,
                        bool asTrans, bool asAxisAngle)
 {
-    Entity en = {};
+    Entity en {};
     en.type = ep->type;
     en.extraPoints = ep->extraPoints;
     en.h = Remap(ep->h, remap);
