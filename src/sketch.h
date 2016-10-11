@@ -315,11 +315,13 @@ public:
     hStyle      style;
 
     bool        construction;
+
     std::string str;
     std::string font;
+    double      aspectRatio;
 
     static hParam AddParam(ParamList *param, hParam hp);
-    void Generate(EntityList *entity, ParamList *param) const;
+    void Generate(EntityList *entity, ParamList *param);
 
     std::string DescriptionString() const;
     int IndexOfPoint(hEntity he) const;
@@ -390,6 +392,7 @@ public:
 
     std::string str;
     std::string font;
+    double      aspectRatio;
 
     // For entities that are derived by a transformation, the number of
     // times to apply the transformation.
@@ -856,7 +859,7 @@ inline hRequest hEntity::request() const
 inline hGroup hEntity::group() const
     { hGroup r; r.v = (v >> 16) & 0x3fff; return r; }
 inline hEquation hEntity::equation(int i) const
-    { hEquation r; r.v = v | 0x40000000; return r; }
+    { hEquation r; r.v = v | 0x40000000 | (uint32_t)i; return r; }
 
 inline hRequest hParam::request() const
     { hRequest r; r.v = (v >> 16); return r; }

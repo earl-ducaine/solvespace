@@ -752,6 +752,7 @@ void EntityBase::GenerateEquations(IdList<Equation,hEquation> *l) const {
             AddEq(l, (q.Magnitude())->Minus(Expr::From(1)), 0);
             break;
         }
+
         case Type::ARC_OF_CIRCLE: {
             // If this is a copied entity, with its point already fixed
             // with respect to each other, then we don't want to generate
@@ -780,6 +781,25 @@ void EntityBase::GenerateEquations(IdList<Equation,hEquation> *l) const {
             AddEq(l, ra->Minus(rb), 0);
             break;
         }
+
+        case Type::TTF_TEXT: {
+            EntityBase *a = SK.GetEntity(point[0]);
+            EntityBase *o = SK.GetEntity(point[1]);
+            EntityBase *b = SK.GetEntity(point[2]);
+            ExprVector ae = a->PointGetExprs();
+            ExprVector oe = o->PointGetExprs();
+            ExprVector be = b->PointGetExprs();
+            ExprVector ue = ae.Minus(oe);
+            ExprVector ve = be.Minus(oe);
+
+            // The u and v vectors should be perpendicular, and the ratio of
+            // their lengths should be the same as the text aspect ratio.
+            AddEq(l, ue.Dot(ve), 0);
+            Expr *ratio = (ve.Magnitude())->Div(ue.Magnitude());
+            AddEq(l, ratio->Minus(Expr::From(aspectRatio)), 1);
+            break;
+        }
+
         default: // Most entities do not generate equations.
             break;
     }

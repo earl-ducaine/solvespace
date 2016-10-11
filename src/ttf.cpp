@@ -79,18 +79,28 @@ void TtfFontList::LoadAll() {
     loaded = true;
 }
 
-void TtfFontList::PlotString(const std::string &font, const std::string &str,
-                             SBezierList *sbl, Vector origin, Vector u, Vector v)
+TtfFont *TtfFontList::LoadFont(const std::string &font)
 {
     LoadAll();
 
-    TtfFont *tf = std::find_if(&l.elem[0], &l.elem[l.n],
+    TtfFont *tf = std::find_if(l.begin(), l.end(),
         [&](const TtfFont &tf) { return tf.FontFileBaseName() == font; });
 
-    if(!str.empty() && tf != &l.elem[l.n]) {
+    if(tf != l.end()) {
         if(tf->fontFace == NULL) {
             tf->LoadFromFile(fontLibrary, /*nameOnly=*/false);
         }
+        return tf;
+    } else {
+        return NULL;
+    }
+}
+
+void TtfFontList::PlotString(const std::string &font, const std::string &str,
+                             SBezierList *sbl, Vector origin, Vector u, Vector v)
+{
+    TtfFont *tf = LoadFont(font);
+    if(!str.empty() && tf != NULL) {
         tf->PlotString(str, sbl, origin, u, v);
     } else {
         // No text or no font; so draw a big X for an error marker.
@@ -100,6 +110,16 @@ void TtfFontList::PlotString(const std::string &font, const std::string &str,
         sb = SBezier::From(origin.Plus(v), origin.Plus(u));
         sbl->l.Add(&sb);
     }
+}
+
+double TtfFontList::AspectRatio(const std::string &font, const std::string &str)
+{
+    TtfFont *tf = LoadFont(font);
+    if(tf != NULL) {
+        return tf->AspectRatio(str);
+    }
+
+    return 0.0;
 }
 
 //-----------------------------------------------------------------------------
@@ -147,23 +167,44 @@ bool TtfFont::LoadFromFile(FT_Library fontLibrary, bool nameOnly) {
     if(nameOnly) {
         FT_Done_Face(fontFace);
         fontFace = NULL;
+        return true;
+    }
+
+    // We always ask Freetype to give us a unit size character.
+    // It uses fixed point; put the unit size somewhere in the middle of the dynamic
+    // range of its 26.6 fixed point type, and adjust the factors so that the unit
+    // matches cap height.
+    FT_Size_RequestRec sizeRequest;
+    sizeRequest.type           = FT_SIZE_REQUEST_TYPE_REAL_DIM;
+    sizeRequest.width          = 1 << 16;
+    sizeRequest.height         = 1 << 16;
+    sizeRequest.horiResolution = 128;
+    sizeRequest.vertResolution = 128;
+    if(int fterr = FT_Request_Size(fontFace, &sizeRequest)) {
+        dbp("freetype: cannot set character size: %s",
+            ft_error_string(fterr));
+        FT_Done_Face(fontFace);
+        fontFace = NULL;
+        return false;
     }
 
     return true;
 }
 
+// Ratio between freetype and solvespace coordinates.
+const double FREETYPE_UNIT = 1.0f/(double)(1 << 16);
+
 typedef struct OutlineData {
     Vector       origin, u, v; // input parameters
     SBezierList *beziers;      // output bezier list
-    float        factor;       // ratio between freetype and solvespace coordinates
     FT_Pos       bx;           // x offset of the current glyph
     FT_Pos       px, py;       // current point
 } OutlineData;
 
 static Vector Transform(OutlineData *data, FT_Pos x, FT_Pos y) {
     Vector r = data->origin;
-    r = r.Plus(data->u.ScaledBy((float)(data->bx + x) * data->factor));
-    r = r.Plus(data->v.ScaledBy((float)y * data->factor));
+    r = r.Plus(data->u.ScaledBy((double)(data->bx + x) * FREETYPE_UNIT));
+    r = r.Plus(data->v.ScaledBy((double)y * FREETYPE_UNIT));
     return r;
 }
 
@@ -235,22 +276,6 @@ void TtfFont::PlotString(const std::string &str,
                 chr, ft_error_string(gid));
         }
 
-        // We always ask Freetype to give us a unit size character.
-        // It uses fixed point; put the unit size somewhere in the middle of the dynamic
-        // range of its 26.6 fixed point type, and adjust the factors so that the unit
-        // matches cap height.
-        FT_Size_RequestRec sizeRequest;
-        sizeRequest.type           = FT_SIZE_REQUEST_TYPE_REAL_DIM;
-        sizeRequest.width          = 1 << 16;
-        sizeRequest.height         = 1 << 16;
-        sizeRequest.horiResolution = 128;
-        sizeRequest.vertResolution = 128;
-        if(int fterr = FT_Request_Size(fontFace, &sizeRequest)) {
-            dbp("freetype: cannot set character size: %s",
-                ft_error_string(fterr));
-            return;
-        }
-
         /*
          * Stupid hacks:
          *  - if we want fake-bold, use FT_Outline_Embolden(). This actually looks
@@ -290,7 +315,6 @@ void TtfFont::PlotString(const std::string &str,
         data.u       = u;
         data.v       = v;
         data.beziers = sbl;
-        data.factor  = 1.0f/(float)(1 << 16);
         data.bx      = bx;
         if(int fterr = FT_Outline_Decompose(&fontFace->glyph->outline, &outlineFuncs, &data)) {
             dbp("freetype: bezier decomposition failed (gid %d): %s",
@@ -301,4 +325,28 @@ void TtfFont::PlotString(const std::string &str,
         // width, plus the user-requested extra advance.
         dx += fontFace->glyph->advance.x;
     }
+}
+
+double TtfFont::AspectRatio(const std::string &str) {
+    ssassert(fontFace != NULL, "Expected font face to be loaded");
+
+    // We always request a unit size character, so the aspect ratio is the same as advance length.
+    double dx = 0;
+    for(char32_t chr : ReadUTF8(str)) {
+        uint32_t gid = FT_Get_Char_Index(fontFace, chr);
+        if (gid == 0) {
+            dbp("freetype: CID-to-GID mapping for CID 0x%04x failed: %s; using CID as GID",
+                chr, ft_error_string(gid));
+        }
+
+        if(int fterr = FT_Load_Glyph(fontFace, gid, FT_LOAD_NO_BITMAP | FT_LOAD_NO_HINTING)) {
+            dbp("freetype: cannot load glyph (gid %d): %s",
+                gid, ft_error_string(fterr));
+            break;
+        }
+
+        dx += (double)fontFace->glyph->advance.x * FREETYPE_UNIT;
+    }
+
+    return dx;
 }
