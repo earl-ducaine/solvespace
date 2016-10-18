@@ -550,6 +550,13 @@ void EntityBase::PointGetExprsInWorkplane(hEntity wrkpl, Expr **u, Expr **v) con
     }
 }
 
+ExprVector EntityBase::PointGetExprsInWorkplane(hEntity wrkpl) const {
+    ExprVector r;
+    PointGetExprsInWorkplane(wrkpl, &r.x, &r.y);
+    r.z = Expr::From(0.0);
+    return r;
+}
+
 void EntityBase::PointForceQuaternionTo(Quaternion q) {
     ssassert(type == Type::POINT_N_ROT_TRANS, "Unexpected entity type");
 
@@ -786,17 +793,31 @@ void EntityBase::GenerateEquations(IdList<Equation,hEquation> *l) const {
             EntityBase *a = SK.GetEntity(point[0]);
             EntityBase *o = SK.GetEntity(point[1]);
             EntityBase *b = SK.GetEntity(point[2]);
-            ExprVector ae = a->PointGetExprs();
-            ExprVector oe = o->PointGetExprs();
-            ExprVector be = b->PointGetExprs();
-            ExprVector ue = ae.Minus(oe);
-            ExprVector ve = be.Minus(oe);
+            EntityBase *c = SK.GetEntity(point[3]);
 
-            // The u and v vectors should be perpendicular, and the ratio of
-            // their lengths should be the same as the text aspect ratio.
-            AddEq(l, ue.Dot(ve), 0);
-            Expr *ratio = (ve.Magnitude())->Div(ue.Magnitude());
-            AddEq(l, ratio->Minus(Expr::From(aspectRatio)), 1);
+            // Write equations for each point in the current workplane
+            // This reduces resulting equations complexity
+            ExprVector ae = a->PointGetExprsInWorkplane(workplane);
+            ExprVector oe = o->PointGetExprsInWorkplane(workplane);
+            ExprVector be = b->PointGetExprsInWorkplane(workplane);
+            ExprVector ce = c->PointGetExprsInWorkplane(workplane);
+
+            // Take u vector
+            ExprVector ue = ae.Minus(oe);
+
+            // Take perpendicular vector and scale it by aspect ratio
+            ExprVector ve = ExprVector::From(ue.y, ue.x->Negate(), ue.z).ScaledBy(Expr::From(aspectRatio));
+            
+            // Write the resulting equation for b
+            ExprVector beq = be.Minus(oe.Plus(ve));
+            AddEq(l, beq.x, 0);
+            AddEq(l, beq.y, 1);
+
+            // Write the resulting equation for c
+            ExprVector ceq = ce.Minus(oe.Plus(ue).Plus(ve));
+            AddEq(l, ceq.x, 2);
+            AddEq(l, ceq.y, 3);
+
             break;
         }
 

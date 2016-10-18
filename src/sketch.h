@@ -436,6 +436,7 @@ public:
     Vector PointGetNum() const;
     ExprVector PointGetExprs() const;
     void PointGetExprsInWorkplane(hEntity wrkpl, Expr **u, Expr **v) const;
+    ExprVector PointGetExprsInWorkplane(hEntity wrkpl) const;
     void PointForceTo(Vector v);
     // These apply only the POINT_N_ROT_TRANS, which has an assoc rotation
     Quaternion PointGetQuaternion() const;

@@ -29,7 +29,7 @@ static const EntReqMapping EntReqMap[] = {
 { Request::Type::CUBIC_PERIODIC,  Entity::Type::CUBIC_PERIODIC, 3,  true,   false,  false },
 { Request::Type::CIRCLE,          Entity::Type::CIRCLE,         1,  false,  true,   true  },
 { Request::Type::ARC_OF_CIRCLE,   Entity::Type::ARC_OF_CIRCLE,  3,  false,  true,   false },
-{ Request::Type::TTF_TEXT,        Entity::Type::TTF_TEXT,       3,  false,  true,   false },
+{ Request::Type::TTF_TEXT,        Entity::Type::TTF_TEXT,       4,  false,  true,   false },
 };
 
 static void CopyEntityInfo(const EntReqMapping *te, int extraPoints,
