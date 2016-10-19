@@ -472,6 +472,7 @@ bool SolveSpaceUI::LoadFromFile(const std::string &filename) {
             // for initial guesses
             SK.param.Add(&(sv.p));
             sv.p = {};
+            sv.p.guessed = true;
         } else if(strcmp(line, "AddEntity")==0) {
             // entities are regenerated
         } else if(strcmp(line, "AddRequest")==0) {

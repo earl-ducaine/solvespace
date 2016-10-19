@@ -254,6 +254,7 @@ void SolveSpaceUI::GenerateAll(Generate type, bool andFindFree, bool genForBBox)
                 newp->val = prevp->val;
                 newp->free = prevp->free;
             }
+            newp->guessed = prevp != NULL && prevp->guessed;
         }
 
         if(g->h.v == Group::HGROUP_REFERENCES.v) {
@@ -472,12 +473,6 @@ void SolveSpaceUI::SolveGroup(hGroup hg, bool andFindFree) {
     // And for the group itself
     Group *g = SK.GetGroup(hg);
     g->Generate(&(sys.entity), &(sys.param));
-    // Set the initial guesses for all the params
-    for(i = 0; i < sys.param.n; i++) {
-        Param *p = &(sys.param.elem[i]);
-        p->known = false;
-        p->val = SK.GetParam(p->h)->val;
-    }
 
     MarkDraggedParams();
     g->solved.remove.Clear();

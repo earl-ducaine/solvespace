@@ -438,6 +438,7 @@ public:
     void PointGetExprsInWorkplane(hEntity wrkpl, Expr **u, Expr **v) const;
     ExprVector PointGetExprsInWorkplane(hEntity wrkpl) const;
     void PointForceTo(Vector v);
+    void PointForceParamTo(Vector v);
     // These apply only the POINT_N_ROT_TRANS, which has an assoc rotation
     Quaternion PointGetQuaternion() const;
     void PointForceQuaternionTo(Quaternion q);
@@ -470,6 +471,9 @@ public:
     void GenerateEquations(IdList<Equation,hEquation> *l) const;
 
     void Clear() {}
+    
+    bool IsAllParamsGuessed() const;
+    void MarkAllParamsGuessed(bool state) const;
 };
 
 class Entity : public EntityBase {
@@ -550,6 +554,7 @@ public:
     double      val;
     bool        known;
     bool        free;
+    bool        guessed;
 
     // Used only in the solver
     hParam      substd;

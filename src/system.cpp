@@ -401,6 +401,13 @@ SolveResult System::Solve(Group *g, int *dof, List<hConstraint> *bad,
 {
     WriteEquationsExceptFor(Constraint::NO_CONSTRAINT, g);
 
+    // Set the initial guesses for all the params
+    for(int i = 0; i < param.n; i++) {
+        Param *p = &(param.elem[i]);
+        p->known = false;
+        p->val = SK.GetParam(p->h)->val;
+    }
+
     int i;
     bool rankOk;
 

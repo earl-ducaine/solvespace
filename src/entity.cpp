@@ -367,6 +367,24 @@ ExprQuaternion EntityBase::NormalGetExprs() const {
     return q;
 }
 
+void EntityBase::PointForceParamTo(Vector p) {
+    switch(type) {
+        case Type::POINT_IN_3D:
+            SK.GetParam(param[0])->val = p.x;
+            SK.GetParam(param[1])->val = p.y;
+            SK.GetParam(param[2])->val = p.z;
+            break;
+
+        case Type::POINT_IN_2D: {
+            SK.GetParam(param[0])->val = p.x;
+            SK.GetParam(param[1])->val = p.y;
+            break;
+        }
+        default:
+            ssassert(false, "Can't PointForceParamTo : point type mismatch.");
+    }
+}
+
 void EntityBase::PointForceTo(Vector p) {
     switch(type) {
         case Type::POINT_IN_3D:
@@ -808,13 +826,23 @@ void EntityBase::GenerateEquations(IdList<Equation,hEquation> *l) const {
             // Take perpendicular vector and scale it by aspect ratio
             ExprVector ve = ExprVector::From(ue.y, ue.x->Negate(), ue.z).ScaledBy(Expr::From(aspectRatio));
             
+            ExprVector bex = oe.Plus(ve);
+            ExprVector cex = oe.Plus(ue).Plus(ve);
+            
+            if(!b->IsAllParamsGuessed() || !c->IsAllParamsGuessed()) {
+                b->PointForceParamTo(bex.Eval());
+                b->MarkAllParamsGuessed(true);
+                c->PointForceParamTo(cex.Eval());
+                c->MarkAllParamsGuessed(true);
+            }
+            
             // Write the resulting equation for b
-            ExprVector beq = be.Minus(oe.Plus(ve));
+            ExprVector beq = be.Minus(bex);
             AddEq(l, beq.x, 0);
             AddEq(l, beq.y, 1);
 
             // Write the resulting equation for c
-            ExprVector ceq = ce.Minus(oe.Plus(ue).Plus(ve));
+            ExprVector ceq = ce.Minus(cex);
             AddEq(l, ceq.x, 2);
             AddEq(l, ceq.y, 3);
 
@@ -825,3 +853,38 @@ void EntityBase::GenerateEquations(IdList<Equation,hEquation> *l) const {
             break;
     }
 }
+
+bool EntityBase::IsAllParamsGuessed() const {
+    for(hParam hp : param) {
+        if(hp.v == 0) break;
+        Param *p = SK.GetParam(hp);
+        if(p->guessed) continue;
+        return false;
+    }
+    for(hEntity he : point) {
+        if(he.v == 0) break;
+        EntityBase *p = SK.GetEntity(he);
+        if(p->IsAllParamsGuessed()) continue;
+        return false;
+    }
+    if(normal.v != 0 && !SK.GetEntity(normal)->IsAllParamsGuessed()) return false;
+    if(distance.v != 0 && !SK.GetEntity(distance)->IsAllParamsGuessed()) return false;
+    return true;
+}
+
+void EntityBase::MarkAllParamsGuessed(bool state) const {
+    for(hParam hp : param) {
+        if(hp.v == 0) break;
+        Param *p = SK.GetParam(hp);
+        p->guessed = state;
+    }
+    for(hEntity he : point) {
+        if(he.v == 0) break;
+        EntityBase *p = SK.GetEntity(he);
+        p->MarkAllParamsGuessed(state);
+    }
+    if(normal.v != 0) SK.GetEntity(normal)->MarkAllParamsGuessed(state);
+    if(distance.v != 0) SK.GetEntity(distance)->MarkAllParamsGuessed(state);
+}
+
+
