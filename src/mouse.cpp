@@ -51,7 +51,8 @@ void GraphicsWindow::StartDraggingByEntity(hEntity he) {
               e->type == Entity::Type::CUBIC ||
               e->type == Entity::Type::CUBIC_PERIODIC ||
               e->type == Entity::Type::CIRCLE ||
-              e->type == Entity::Type::TTF_TEXT)
+              e->type == Entity::Type::TTF_TEXT ||
+              e->type == Entity::Type::IMAGE)
     {
         int pts;
         EntReqTable::GetEntityInfo(e->type, e->extraPoints,
@@ -844,13 +845,14 @@ void GraphicsWindow::MouseRightUp(double x, double y) {
     SS.ScheduleShowTW();
 }
 
-hRequest GraphicsWindow::AddRequest(Request::Type type) {
-    return AddRequest(type, /*rememberForUndo=*/true);
-}
 hRequest GraphicsWindow::AddRequest(Request::Type type, bool rememberForUndo) {
+    Request r = {};
+    r.type = type;
+    return AddRequest(r, rememberForUndo);
+}
+hRequest GraphicsWindow::AddRequest(Request r, bool rememberForUndo) {
     if(rememberForUndo) SS.UndoRemember();
 
-    Request r = {};
     r.group = activeGroup;
     Group *g = SK.GetGroup(activeGroup);
     if(g->type == Group::Type::DRAWING_3D || g->type == Group::Type::DRAWING_WORKPLANE) {
@@ -859,7 +861,6 @@ hRequest GraphicsWindow::AddRequest(Request::Type type, bool rememberForUndo) {
         r.construction = true;
     }
     r.workplane = ActiveWorkplane();
-    r.type = type;
     SK.request.AddAndAssignId(&r);
 
     // We must regenerate the parameters, so that the code that tries to
@@ -1076,6 +1077,27 @@ void GraphicsWindow::MouseLeftDown(double mx, double my) {
                     pending.operation = Pending::DRAGGING_NEW_POINT;
                     pending.point = hr.entity(2);
                     pending.description = "click to place bottom left of text";
+                    break;
+                }
+
+                case Command::IMAGE: {
+                    if(!SS.GW.LockedInWorkplane()) {
+                        Error("Can't draw image in 3d; first, activate a workplane "
+                              "with Sketch -> In Workplane.");
+                        ClearSuper();
+                        break;
+                    }
+                    Request r = {};
+                    r.type = Request::Type::IMAGE;
+                    r.str  = pending.filename;
+                    hr = AddRequest(r);
+
+                    SK.GetEntity(hr.entity(1))->PointForceTo(v);
+                    SK.GetEntity(hr.entity(2))->PointForceTo(v);
+
+                    pending.operation = Pending::DRAGGING_NEW_POINT;
+                    pending.point = hr.entity(2);
+                    pending.description = "click to place bottom left of image";
                     break;
                 }
 

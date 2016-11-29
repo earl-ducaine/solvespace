@@ -33,6 +33,7 @@ void SolveSpaceUI::ClearExisting() {
 
     SK.entity.Clear();
     SK.param.Clear();
+    images.clear();
 }
 
 hGroup SolveSpaceUI::CreateDefaultDrawingGroup() {
@@ -260,6 +261,7 @@ bool SolveSpaceUI::SaveToFile(const std::string &filename) {
     // will be exported. We reload the linked files because that rewrites
     // the linkFileRel for our possibly-new filename.
     SS.ScheduleShowTW();
+    SS.images.clear();
     SS.ReloadAllImported();
     SS.GenerateAll(SolveSpaceUI::Generate::ALL);
 
@@ -552,7 +554,7 @@ void SolveSpaceUI::UpgradeLegacyData() {
                     Entity *b = entity.FindById(text->point[2]);
                     Entity *c = entity.FindById(text->point[3]);
                     ExprVector bex, cex;
-                    text->TtfTextGetPointsExprs(&bex, &cex);
+                    text->RectGetPointsExprs(&bex, &cex);
                     b->PointForceParamTo(bex.Eval());
                     c->PointForceParamTo(cex.Eval());
                 }
@@ -967,3 +969,48 @@ try_load_file:
     return true;
 }
 
+std::shared_ptr<Pixmap> SolveSpaceUI::LoadLinkedImage(std::string *filenameRel) {
+    auto image = SS.images.end();
+    if(!filenameRel->empty()) {
+        image = SS.images.find(*filenameRel);
+    }
+    if(image != SS.images.end()) {
+        return image->second;
+    }
+
+    FILE *f = NULL;
+    std::string filename;
+    if(!filenameRel->empty()) {
+        filename = MakePathAbsolute(SS.saveFile, *filenameRel);
+        f = ssfopen(filename, "rb");
+    }
+    if(f == NULL) {
+        bool shouldReload = false;
+        if(filename.empty()) {
+            shouldReload = true;
+        } else {
+            switch(LocateImportedFileYesNoCancel(*filenameRel, /*canCancel=*/false)) {
+                case DIALOG_YES:
+                    shouldReload = true;
+                    break;
+                default:
+                    break;
+            }
+        }
+        if(shouldReload) {
+            if(GetOpenFile(&filename, "", RasterFileFilter)) {
+                f = ssfopen(filename, "rb");
+            }
+        }
+    }
+
+    if(f != NULL) {
+        *filenameRel = MakePathRelative(SS.saveFile, filename);
+        SS.images.emplace(*filenameRel, Pixmap::ReadPng(f));
+        fclose(f);
+
+        image = SS.images.find(*filenameRel);
+        return image->second;
+    }
+    return std::shared_ptr<Pixmap>(NULL);
+}

@@ -67,6 +67,7 @@ enum class Command : uint32_t {
     RECTANGLE,
     CUBIC,
     TTF_TEXT,
+    IMAGE,
     SPLIT_CURVES,
     TANGENT_ARC,
     CONSTRUCTION,
@@ -602,6 +603,7 @@ public:
         hConstraint          constraint;
 
         const char          *description;
+        std::string          filename;
 
         bool                 hasSuggestion;
         Constraint::Type     suggestion;
@@ -615,8 +617,8 @@ public:
     Vector SnapToGrid(Vector p);
     bool ConstrainPointByHovered(hEntity pt);
     void DeleteTaggedRequests();
-    hRequest AddRequest(Request::Type type, bool rememberForUndo);
-    hRequest AddRequest(Request::Type type);
+    hRequest AddRequest(Request::Type type, bool rememberForUndo = true);
+    hRequest AddRequest(Request r, bool rememberForUndo = true);
 
     class ParametricCurve {
     public:

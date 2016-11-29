@@ -181,9 +181,9 @@ const FileFilter SlvsFileFilter[] = {
     { "SolveSpace models",          { "slvs" } },
     { NULL, {} }
 };
-// PNG format bitmap
-const FileFilter PngFileFilter[] = {
-    { "PNG file",                   { "png" } },
+// Raster images
+const FileFilter RasterFileFilter[] = {
+    { "Portable Network Graphics",  { "png" } },
     { NULL, {} }
 };
 // Triangle mesh
@@ -696,6 +696,10 @@ public:
     } UndoStack;
     UndoStack   undo;
     UndoStack   redo;
+
+    std::map<std::string, std::shared_ptr<Pixmap>> images;
+    std::shared_ptr<Pixmap> LoadLinkedImage(std::string *filenameRel);
+
     void UndoEnableMenus();
     void UndoRemember();
     void UndoUndo();

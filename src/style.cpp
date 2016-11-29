@@ -394,7 +394,7 @@ void TextWindow::ScreenBackgroundImage(int link, uint32_t v) {
 
     if(link == 'l') {
         std::string bgImageFile;
-        if(GetOpenFile(&bgImageFile, "", PngFileFilter)) {
+        if(GetOpenFile(&bgImageFile, "", RasterFileFilter)) {
             FILE *f = ssfopen(bgImageFile, "rb");
             if(f) {
                 SS.bgImage.pixmap = Pixmap::ReadPng(f);

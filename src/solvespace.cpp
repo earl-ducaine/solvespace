@@ -454,7 +454,7 @@ void SolveSpaceUI::MenuFile(Command id) {
 
         case Command::EXPORT_PNG: {
             std::string exportFile = SS.saveFile;
-            if(!GetSaveFile(&exportFile, "", PngFileFilter)) break;
+            if(!GetSaveFile(&exportFile, "", RasterFileFilter)) break;
             SS.ExportAsPngTo(exportFile);
             break;
         }
