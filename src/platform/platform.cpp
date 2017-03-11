@@ -1,24 +1,82 @@
 //-----------------------------------------------------------------------------
-// Common platform-dependent functionality.
+// Platform-dependent functionality.
 //
 // Copyright 2017 whitequark
 //-----------------------------------------------------------------------------
 #if defined(__APPLE__)
+// Include Apple headers before solvespace.h to avoid identifier clashes.
 #   include <CoreFoundation/CFString.h>
+#   include <CoreFoundation/CFURL.h>
+#   include <CoreFoundation/CFBundle.h>
 #endif
 #include "solvespace.h"
+#include "config.h"
 #if defined(WIN32)
+// Conversely, include Microsoft headers after solvespace.h to avoid clashes.
 #   include <windows.h>
 #else
 #   include <unistd.h>
+#   include <sys/stat.h>
 #endif
 
 namespace SolveSpace {
-
-using namespace Platform;
+namespace Platform {
 
 //-----------------------------------------------------------------------------
-// Utility functions.
+// UTF-8 ⟷ UTF-16 conversion, on Windows.
+//-----------------------------------------------------------------------------
+
+#if defined(WIN32)
+
+std::string Narrow(const wchar_t *in)
+{
+    std::string out;
+    DWORD len = WideCharToMultiByte(CP_UTF8, 0, in, -1, NULL, 0, NULL, NULL);
+    out.resize(len - 1);
+    ssassert(WideCharToMultiByte(CP_UTF8, 0, in, -1, &out[0], len, NULL, NULL),
+             "Invalid UTF-16");
+    return out;
+}
+
+std::string Narrow(const std::wstring &in)
+{
+    if(in == L"") return "";
+
+    std::string out;
+    out.resize(WideCharToMultiByte(CP_UTF8, 0, &in[0], (int)in.length(),
+                                   NULL, 0, NULL, NULL));
+    ssassert(WideCharToMultiByte(CP_UTF8, 0, &in[0], (int)in.length(),
+                                 &out[0], (int)out.length(), NULL, NULL),
+             "Invalid UTF-16");
+    return out;
+}
+
+std::wstring Widen(const char *in)
+{
+    std::wstring out;
+    DWORD len = MultiByteToWideChar(CP_UTF8, 0, in, -1, NULL, 0);
+    out.resize(len - 1);
+    ssassert(MultiByteToWideChar(CP_UTF8, 0, in, -1, &out[0], len),
+             "Invalid UTF-8");
+    return out;
+}
+
+std::wstring Widen(const std::string &in)
+{
+    if(in == "") return L"";
+
+    std::wstring out;
+    out.resize(MultiByteToWideChar(CP_UTF8, 0, &in[0], (int)in.length(), NULL, 0));
+    ssassert(MultiByteToWideChar(CP_UTF8, 0, &in[0], (int)in.length(),
+                                 &out[0], (int)out.length()),
+             "Invalid UTF-8");
+    return out;
+}
+
+#endif
+
+//-----------------------------------------------------------------------------
+// Path utility functions.
 //-----------------------------------------------------------------------------
 
 static std::vector<std::string> Split(const std::string &joined, char separator) {
@@ -70,7 +128,7 @@ Path Path::From(std::string raw) {
 
 Path Path::CurrentDirectory() {
 #if defined(WIN32)
-    // On Windows, ssfopen needs an absolute UNC path proper, so get that.
+    // On Windows, OpenFile needs an absolute UNC path proper, so get that.
     std::wstring rawW;
     rawW.resize(GetCurrentDirectoryW(0, NULL));
     DWORD length = GetCurrentDirectoryW((int)rawW.length(), &rawW[0]);
@@ -332,4 +390,150 @@ std::string Path::ToPortable() const {
     return Concat(Split(raw, SEPARATOR), '/');
 }
 
+//-----------------------------------------------------------------------------
+// File manipulation.
+//-----------------------------------------------------------------------------
+
+FILE *OpenFile(const Platform::Path &filename, const char *mode) {
+    ssassert(filename.raw.length() == strlen(filename.raw.c_str()),
+             "Unexpected null byte in middle of a path");
+#if defined(WIN32)
+    return _wfopen(Widen(filename.Expand().raw).c_str(), Widen(mode).c_str());
+#else
+    return fopen(filename.raw.c_str(), mode);
+#endif
+}
+
+void RemoveFile(const Platform::Path &filename) {
+    ssassert(filename.raw.length() == strlen(filename.raw.c_str()),
+             "Unexpected null byte in middle of a path");
+#if defined(WIN32)
+    _wremove(Widen(filename.Expand().raw).c_str());
+#else
+    remove(filename.raw.c_str());
+#endif
+}
+
+bool ReadFile(const Platform::Path &filename, std::string *data) {
+    FILE *f = OpenFile(filename, "rb");
+    if(f == NULL) return false;
+
+    fseek(f, 0, SEEK_END);
+    data->resize(ftell(f));
+    fseek(f, 0, SEEK_SET);
+    fread(&(*data)[0], 1, data->size(), f);
+    fclose(f);
+
+    return true;
+}
+
+bool WriteFile(const Platform::Path &filename, const std::string &data) {
+    FILE *f = OpenFile(filename, "wb");
+    if(f == NULL) return false;
+
+    fwrite(&data[0], 1, data.size(), f);
+    fclose(f);
+
+    return true;
+}
+
+//-----------------------------------------------------------------------------
+// Loading resources, on Windows.
+//-----------------------------------------------------------------------------
+
+#if defined(WIN32)
+
+const void *LoadResource(const std::string &name, size_t *size) {
+    HRSRC hres = FindResourceW(NULL, Widen(name).c_str(), RT_RCDATA);
+    ssassert(hres != NULL, "Cannot find resource");
+    HGLOBAL res = ::LoadResource(NULL, hres);
+    ssassert(res != NULL, "Cannot load resource");
+
+    *size = SizeofResource(NULL, hres);
+    return LockResource(res);
+}
+
+#endif
+
+//-----------------------------------------------------------------------------
+// Loading resources, on *nix.
+//-----------------------------------------------------------------------------
+
+#if !defined(WIN32)
+
+#    if defined(__linux__)
+static const char *selfSymlink = "/proc/self/exe";
+#    elif defined(__NetBSD__)
+static const char *selfSymlink = "/proc/curproc/exe"
+#    elif defined(__OpenBSD__) || defined(__FreeBSD__)
+static const char *selfSymlink = "/proc/curproc/file";
+#    else
+static const char *selfSymlink = "";
+#    endif
+
+static Platform::Path FindLocalResourceDir() {
+#if defined(__APPLE__)
+    Platform::Path resourceDir;
+    CFURLRef cfUrl = CFBundleCopyResourcesDirectoryURL(CFBundleGetMainBundle());
+    CFStringRef cfPath = CFURLCopyFileSystemPath(cfUrl, kCFURLPOSIXPathStyle);
+    resourceDir.raw.resize(CFStringGetLength(cfPath) + 1); // reserve space for NUL
+    ssassert(CFStringGetCString(cfPath, &resourceDir.raw[0], resourceDir.raw.size(),
+                                kCFStringEncodingUTF8),
+             "Cannot convert CFString to C string");
+    resourceDir.raw.resize(resourceDir.raw.size() - 1);
+    CFRelease(cfUrl);
+    CFRelease(cfPath);
+    return resourceDir;
+#else
+    // Find out the path to the running binary.
+    Platform::Path selfPath;
+    char *expandedSelfPath = realpath(selfSymlink, NULL);
+    if(expandedSelfPath != NULL) {
+        selfPath = Path::From(expandedSelfPath);
+    }
+    free(expandedSelfPath);
+
+    Platform::Path resourceDir;
+    if(selfPath.IsEmpty()) {
+        // We don't know how to find the local resource directory on this platform,
+        // so use the global one (by returning an empty string).
+        return Path::From(UNIX_DATADIR);
+    } else {
+        resourceDir = selfPath.Parent().Parent().Join("res");
+    }
+
+    struct stat st;
+    if(stat(resourceDir.raw.c_str(), &st) != -1) {
+        // An executable-adjacent resource directory exists, good.
+        return resourceDir;
+    }
+
+    // No executable-adjacent resource directory; use the one from compile-time prefix.
+    return Path::From(UNIX_DATADIR);
+#endif
+}
+
+const void *LoadResource(const std::string &name, size_t *size) {
+    static Platform::Path resourceDir;
+    static std::map<std::string, std::string> cache;
+
+    if(resourceDir.IsEmpty()) {
+        resourceDir = FindLocalResourceDir();
+    }
+
+    auto it = cache.find(name);
+    if(it == cache.end()) {
+        ssassert(ReadFile(resourceDir.Join(Path::From(name)), &cache[name]),
+                 "Cannot read resource");
+        it = cache.find(name);
+    }
+
+    const std::string &content = (*it).second;
+    *size = content.size();
+    return (const void*)content.data();
+}
+
+#endif
+
+}
 }
